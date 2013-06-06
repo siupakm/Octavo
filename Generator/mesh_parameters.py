@@ -34,7 +34,7 @@ def generate_partition_options(parameters = {}):
 
 def generate_mesh_name(all_parameters):
     """You can do fancy naming here by refering to parameter names in the template: e.g. ${WORD_WIDTH}"""
-    name_template = string.Template("${CPU_NAME}x${WORD_WIDTH}_A${A_IO_READ_PORT_COUNT}i${A_IO_WRITE_PORT_COUNT}o_B${B_IO_READ_PORT_COUNT}i${B_IO_WRITE_PORT_COUNT}o_SIMD${SIMD_LAYER_COUNT}x${SIMD_LANES_PER_LAYER}x${SIMD_WORD_WIDTH}_Mesh${MESH_LINE_NODE_COUNT}x${MESH_PAGE_LINE_COUNT}")
+    name_template = string.Template("${CPU_NAME}_Mesh${MESH_LINE_NODE_COUNT}x${MESH_PAGE_LINE_COUNT}")
     name = name_template.substitute(all_parameters)
     return {"MESH_NAME":name}
 
@@ -42,7 +42,9 @@ def generate_mesh_name(all_parameters):
 def all_parameters(parameters = {}):
     all_parameters = {}
 
-    ## The cpu and mesh parameters don't depend on eachother for now
+    # A rectangular mesh needs exactly 2 each of A and B ports
+    assert "PORTS_COUNT" not in parameters.keys(), "You can't change the PORTS_COUNT of a Mesh. It's always 2. Leave it alone."
+    parameters.update({"PORTS_COUNT" : 2})
     cpu = cpu_parameters.all_parameters(parameters)
     all_parameters.update(cpu)
 

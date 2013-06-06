@@ -76,8 +76,8 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
     parameter       B_IO_WRITE_PORT_COUNT_ALL           = (B_IO_WRITE_PORT_COUNT + SIMD_B_IO_WRITE_PORT_COUNT_TOTAL),
     
     parameter       MESH_A_IO_READ_PORT_COUNT_ALL       = (A_IO_READ_PORT_COUNT_ALL  * MESH_LINE_NODE_COUNT),
-    parameter       MESH_A_IO_READ_PORT_COUNT_ALL       = (A_IO_READ_PORT_COUNT_ALL  * MESH_LINE_NODE_COUNT),
-    parameter       MESH_B_IO_WRITE_PORT_COUNT_ALL      = (B_IO_WRITE_PORT_COUNT_ALL * MESH_PAGE_LINE_COUNT),
+    parameter       MESH_A_IO_WRITE_PORT_COUNT_ALL      = (A_IO_WRITE_PORT_COUNT_ALL * MESH_LINE_NODE_COUNT),
+    parameter       MESH_B_IO_READ_PORT_COUNT_ALL       = (B_IO_READ_PORT_COUNT_ALL  * MESH_PAGE_LINE_COUNT),
     parameter       MESH_B_IO_WRITE_PORT_COUNT_ALL      = (B_IO_WRITE_PORT_COUNT_ALL * MESH_PAGE_LINE_COUNT),
 
     parameter       MESH_A_IO_READ_PORT_WIDTH_ALL       = (A_IO_READ_PORT_WIDTH_ALL  * MESH_LINE_NODE_COUNT),
@@ -146,8 +146,6 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
     );
 
 
-
-
     // ****** A PORT INPUT ******
     shift_register
     #(
@@ -174,122 +172,57 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
         .output_port    (dut_A_in)
     );
 
-    ///////////////////
-    // ETAOIN SHRDLU // Also remember to fashion a simple_link for the mesh that uses wren/rden, and change the generator to match!
-    ///////////////////
-
     // ****** A PORT OUTPUT ******
-    wire    [A_IO_WRITE_PORT_WIDTH_ALL-1:0]     out_A;
+    wire    [MESH_A_IO_WRITE_PORT_WIDTH_ALL-1:0]     out_A;
     
     output_register
     #(
-        .WIDTH          (A_WORD_WIDTH)
+        .WIDTH          (A_IO_WRITE_PORT_WIDTH_ALL)
     )
-    or_out_A            [A_IO_WRITE_PORT_COUNT-1:0]
+    or_out_A            [MESH_A_IO_WRITE_PORT_COUNT_ALL-1:0]
     (
         .clock          (clock),
-        .in             (dut_A_out [0 +: A_IO_WRITE_PORT_WIDTH]),
-        .wren           (dut_A_wren[0 +: A_IO_WRITE_PORT_COUNT]),
+        .in             (dut_A_out),
+        .wren           (dut_A_wren),
         .out            (out_A)
     );
 
     registered_reducer
     #(
-        .WIDTH          (A_WORD_WIDTH)
+        .WIDTH          (A_IO_WRITE_PORT_WIDTH_ALL)
     ) 
-    rr_out_A            [A_IO_WRITE_PORT_COUNT-1:0]
+    rr_out_A            [MESH_A_IO_WRITE_PORT_COUNT_ALL-1:0]
     (
         .clock          (clock),
         .input_port     (out_A),
-        .output_port    (A_out[0 +: A_IO_WRITE_PORT_COUNT])
+        .output_port    (A_out)
     );
 
-    generate
-        if (SIMD_LANE_COUNT > 0) begin
-            wire    [SIMD_A_IO_WRITE_PORT_WIDTH_TOTAL-1:0]  SIMD_out_A;
-            
-            output_register
-            #(
-                .WIDTH          (SIMD_A_WORD_WIDTH)
-            )
-            SIMD_or_out_A       [SIMD_A_IO_WRITE_PORT_COUNT_TOTAL-1:0]
-            (
-                .clock          (clock),
-                .in             (dut_A_out [A_IO_WRITE_PORT_WIDTH_ALL-1 : A_IO_WRITE_PORT_WIDTH]),
-                .wren           (dut_A_wren[A_IO_WRITE_PORT_COUNT_ALL-1 : A_IO_WRITE_PORT_COUNT]),
-                .out            (SIMD_out_A)
-            );
-
-            registered_reducer
-            #(
-                .WIDTH          (SIMD_A_WORD_WIDTH)
-            ) 
-            SIMD_rr_out_A       [SIMD_A_IO_WRITE_PORT_COUNT_TOTAL-1:0]
-            (
-                .clock          (clock),
-                .input_port     (SIMD_out_A),
-                .output_port    (A_out[A_IO_WRITE_PORT_COUNT_ALL-1 : A_IO_WRITE_PORT_COUNT])
-            );
-        end
-    endgenerate
-
-
-
-
     // ****** B PORT OUTPUT ******
-    wire    [B_IO_WRITE_PORT_WIDTH-1:0]     out_B;
+    wire    [MESH_B_IO_WRITE_PORT_WIDTH_ALL-1:0]     out_B;
     
     output_register
     #(
-        .WIDTH          (B_WORD_WIDTH)
+        .WIDTH          (B_IO_WRITE_PORT_WIDTH_ALL)
     )
-    or_out_B            [B_IO_WRITE_PORT_COUNT-1:0]
+    or_out_B            [MESH_B_IO_WRITE_PORT_COUNT_ALL-1:0]
     (
         .clock          (clock),
-        .in             (dut_B_out [0 +: B_IO_WRITE_PORT_WIDTH]),
-        .wren           (dut_B_wren[0 +: B_IO_WRITE_PORT_COUNT]),
+        .in             (dut_B_out),
+        .wren           (dut_B_wren),
         .out            (out_B)
     );
 
     registered_reducer
     #(
-        .WIDTH          (B_WORD_WIDTH)
+        .WIDTH          (B_IO_WRITE_PORT_WIDTH_ALL)
     ) 
-    rr_out_B            [B_IO_WRITE_PORT_COUNT-1:0]
+    rr_out_B            [MESH_B_IO_WRITE_PORT_COUNT_ALL-1:0]
     (
         .clock          (clock),
         .input_port     (out_B),
-        .output_port    (B_out[0 +: B_IO_WRITE_PORT_COUNT])
+        .output_port    (B_out)
     );
-
-    generate
-        if (SIMD_LANE_COUNT > 0) begin
-            wire    [SIMD_B_IO_WRITE_PORT_WIDTH_TOTAL-1:0]  SIMD_out_B;
-            
-            output_register
-            #(
-                .WIDTH          (SIMD_B_WORD_WIDTH)
-            )
-            SIMD_or_out_B       [SIMD_B_IO_WRITE_PORT_COUNT_TOTAL-1:0]
-            (
-                .clock          (clock),
-                .in             (dut_B_out [B_IO_WRITE_PORT_WIDTH_ALL-1 : B_IO_WRITE_PORT_WIDTH]),
-                .wren           (dut_B_wren[B_IO_WRITE_PORT_COUNT_ALL-1 : B_IO_WRITE_PORT_COUNT]),
-                .out            (SIMD_out_B)
-            );
-
-            registered_reducer
-            #(
-                .WIDTH          (SIMD_B_WORD_WIDTH)
-            ) 
-            SIMD_rr_out_B       [SIMD_B_IO_WRITE_PORT_COUNT_TOTAL-1:0]
-            (
-                .clock          (clock),
-                .input_port     (SIMD_out_B),
-                .output_port    (B_out[B_IO_WRITE_PORT_COUNT_ALL-1 : B_IO_WRITE_PORT_COUNT])
-            );
-        end
-    endgenerate
 endmodule
 """)
     parameters["default_memory_init"] = default_memory_init
