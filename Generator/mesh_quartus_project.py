@@ -134,7 +134,10 @@ set_global_assignment -name VERILOG_FILE ${install_base}/Octavo/Scalar.v
 set_global_assignment -name VERILOG_FILE ${install_base}/Harness/output_register.v
 set_global_assignment -name VERILOG_FILE ${install_base}/Harness/shift_register.v
 set_global_assignment -name VERILOG_FILE ${install_base}/Harness/registered_reducer.v
-set_global_assignment -name VERILOG_FILE ../${CPU_NAME}.v
+set_global_assignment -name VERILOG_FILE ${install_base}/Mesh/Mesh_Pipe_Array.v
+set_global_assignment -name VERILOG_FILE ${install_base}/Mesh/Mesh_Node_Line.v
+set_global_assignment -name VERILOG_FILE ${install_base}/Mesh/Mesh_Page.v
+set_global_assignment -name VERILOG_FILE ../${MESH_NAME}.v
 set_global_assignment -name VERILOG_FILE ${PROJECT_NAME}.v
 set_global_assignment -name FLOW_ENABLE_RTL_VIEWER OFF
 
