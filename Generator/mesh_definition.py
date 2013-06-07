@@ -232,7 +232,7 @@ def definition(all_parameters):
         .SIMD_MULT_USE_DSP                  (SIMD_MULT_USE_DSP),
 
         .SIMD_LAYER_COUNT                   (SIMD_LAYER_COUNT),
-        .SIMD_LANES_PER_LAYER               (SIMD_LANES_PER_LAYER)
+        .SIMD_LANES_PER_LAYER               (SIMD_LANES_PER_LAYER),
         .MESH_LINE_NODE_COUNT               (MESH_LINE_NODE_COUNT),
         .MESH_LINE_EDGE_PIPE_DEPTH          (MESH_LINE_EDGE_PIPE_DEPTH),
         .MESH_LINE_NODE_PIPE_DEPTH          (MESH_LINE_NODE_PIPE_DEPTH),
@@ -254,15 +254,15 @@ def definition(all_parameters):
         .ALU_c_in                           (ALU_c_in),
         .ALU_c_out                          (ALU_c_out),
 
-        .A_io_rden                          (A_rden),
-        .A_io_in                            (A_in),
-        .A_io_out                           (A_out),
-        .A_io_wren                          (A_wren),
+        .A_rden                             (A_rden),
+        .A_in                               (A_in),
+        .A_out                              (A_out),
+        .A_wren                             (A_wren),
         
-        .B_io_rden                          (B_rden),
-        .B_io_in                            (B_in),
-        .B_io_out                           (B_out),
-        .B_io_wren                          (B_wren)
+        .B_rden                             (B_rden),
+        .B_in                               (B_in),
+        .B_out                              (B_out),
+        .B_wren                             (B_wren)
     );
 endmodule
 """)
