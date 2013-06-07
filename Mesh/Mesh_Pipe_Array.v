@@ -36,17 +36,21 @@ module Mesh_Pipe_Array
         .out    (out[LSB_END:LSB_START])
     );  
 
-    delay_line
-    #(  
-        .DEPTH  (MID_PIPE_DEPTH),
-        .WIDTH  (WIDTH)
-    )
-    Mesh_Pipe_MID    [MID_COUNT-1:0] 
-    (   
-        .clock  (clock),
-        .in     (in [MID_END:MID_START]),
-        .out    (out[MID_END:MID_START])
-    );  
+    generate
+        if (MID_COUNT > 0) begin
+            delay_line
+            #(  
+                .DEPTH  (MID_PIPE_DEPTH),
+                .WIDTH  (WIDTH)
+            )
+            Mesh_Pipe_MID    [MID_COUNT-1:0] 
+            (   
+                .clock  (clock),
+                .in     (in [MID_END:MID_START]),
+                .out    (out[MID_END:MID_START])
+            );
+        end
+    endgenerate
 
     delay_line
     #(  
