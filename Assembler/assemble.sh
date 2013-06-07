@@ -1,6 +1,6 @@
 #! /bin/bash
 
-PARAMS="../Octavo_raw/Misc/params.v"
+PARAMS="../Octavo/Misc/params.v"
 
 clear
 qverilog -mfcu -incr -lint -novopt $PARAMS $1
