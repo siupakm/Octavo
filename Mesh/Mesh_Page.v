@@ -146,13 +146,13 @@ module Mesh_Page
 
     localparam  A_rden_WIDTH       = ((               A_IO_READ_PORT_COUNT)  + (                    SIMD_A_IO_READ_PORT_COUNT  * SIMD_LANE_COUNT)) * MESH_LINE_NODE_COUNT;
     localparam  A_in_WIDTH         = ((A_WORD_WIDTH * A_IO_READ_PORT_COUNT)  + (SIMD_A_WORD_WIDTH * SIMD_A_IO_READ_PORT_COUNT  * SIMD_LANE_COUNT)) * MESH_LINE_NODE_COUNT;
-    localparam  A_out_WIDTH        = ((               A_IO_WRITE_PORT_COUNT) + (                    SIMD_A_IO_WRITE_PORT_COUNT * SIMD_LANE_COUNT)) * MESH_LINE_NODE_COUNT;
-    localparam  A_wren_WIDTH       = ((A_WORD_WIDTH * A_IO_WRITE_PORT_COUNT) + (SIMD_A_WORD_WIDTH * SIMD_A_IO_WRITE_PORT_COUNT * SIMD_LANE_COUNT)) * MESH_LINE_NODE_COUNT;
+    localparam  A_wren_WIDTH       = ((               A_IO_WRITE_PORT_COUNT) + (                    SIMD_A_IO_WRITE_PORT_COUNT * SIMD_LANE_COUNT)) * MESH_LINE_NODE_COUNT;
+    localparam  A_out_WIDTH        = ((A_WORD_WIDTH * A_IO_WRITE_PORT_COUNT) + (SIMD_A_WORD_WIDTH * SIMD_A_IO_WRITE_PORT_COUNT * SIMD_LANE_COUNT)) * MESH_LINE_NODE_COUNT;
 
     localparam  B_rden_WIDTH       = ((               B_IO_READ_PORT_COUNT)  + (                    SIMD_B_IO_READ_PORT_COUNT  * SIMD_LANE_COUNT)) * MESH_PAGE_LINE_COUNT;
     localparam  B_in_WIDTH         = ((B_WORD_WIDTH * B_IO_READ_PORT_COUNT)  + (SIMD_B_WORD_WIDTH * SIMD_B_IO_READ_PORT_COUNT  * SIMD_LANE_COUNT)) * MESH_PAGE_LINE_COUNT;
-    localparam  B_out_WIDTH        = ((               B_IO_WRITE_PORT_COUNT) + (                    SIMD_B_IO_WRITE_PORT_COUNT * SIMD_LANE_COUNT)) * MESH_PAGE_LINE_COUNT;
-    localparam  B_wren_WIDTH       = ((B_WORD_WIDTH * B_IO_WRITE_PORT_COUNT) + (SIMD_B_WORD_WIDTH * SIMD_B_IO_WRITE_PORT_COUNT * SIMD_LANE_COUNT)) * MESH_PAGE_LINE_COUNT;
+    localparam  B_wren_WIDTH       = ((               B_IO_WRITE_PORT_COUNT) + (                    SIMD_B_IO_WRITE_PORT_COUNT * SIMD_LANE_COUNT)) * MESH_PAGE_LINE_COUNT;
+    localparam  B_out_WIDTH        = ((B_WORD_WIDTH * B_IO_WRITE_PORT_COUNT) + (SIMD_B_WORD_WIDTH * SIMD_B_IO_WRITE_PORT_COUNT * SIMD_LANE_COUNT)) * MESH_PAGE_LINE_COUNT;
 
     // The "Mesh_Node_Line_" wires populate the ports of the Mesh_Node_Line instances (see below).
     wire    [I_wren_other_WIDTH-1:0]                    Mesh_Node_Line_I_wren_other; 
@@ -197,9 +197,9 @@ module Mesh_Page
     // One extra pipe stage needed for inputs to Line
     localparam  PIPE_ARRAY_SIZE = (MESH_PAGE_LINE_COUNT + 1);
     // Shown in loop nesting order: first connect A ports across lines along one node index, then repeat for all other node indices.
-    integer node;
-    integer line;
-    genvar  lane;
+    genvar node;
+    genvar line;
+    genvar lane;
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Port A0 goes LSB to MSB (bottom to top), and thus wired straight-through.
@@ -217,9 +217,9 @@ module Mesh_Page
 
     Mesh_Pipe_Array
     #(
-        .LSB_PIPE_DEPTH     (MESH_EDGE_PIPE_DEPTH),
-        .MID_PIPE_DEPTH     (MESH_NODE_PIPE_DEPTH),
-        .MSB_PIPE_DEPTH     (MESH_EDGE_PIPE_DEPTH),
+        .LSB_PIPE_DEPTH     (MESH_PAGE_EDGE_PIPE_DEPTH),
+        .MID_PIPE_DEPTH     (MESH_PAGE_NODE_PIPE_DEPTH),
+        .MSB_PIPE_DEPTH     (MESH_PAGE_EDGE_PIPE_DEPTH),
         .WIDTH              (A_WORD_WIDTH * MESH_LINE_NODE_COUNT),
         .PIPE_ARRAY_SIZE    (PIPE_ARRAY_SIZE) 
     )
@@ -230,14 +230,16 @@ module Mesh_Page
         .out                (A0_pipe_out)
     );
     
-    for (node=0; node < MESH_LINE_NODE_COUNT; node=node+1;) begin
-        assign A0_pipe_in[A0_pipe_index(0, node) +: A_WORD_WIDTH] = A_in[(Node_A_in_WIDTH * node) +: A_WORD_WIDTH];
-        for (line=0; line < (PIPE_ARRAY_SIZE-1); line=line+1;) begin
-            assign Mesh_Node_A_in[((A_in_WIDTH * line) + (Node_A_in_WIDTH * node)) +: A_WORD_WIDTH] = A0_pipe_out[A0_pipe_index(line, node) +: A_WORD_WIDTH];
-            assign A0_pipe_in[A0_pipe_index(line+1, node) +: A_WORD_WIDTH] = Mesh_Node_A_out[((A_out_WIDTH * line) + (Node_A_out_WIDTH * node)) +: A_WORD_WIDTH];
+    generate
+        for (node=0; node < MESH_LINE_NODE_COUNT; node=node+1) begin : A0_pipe_node
+            assign A0_pipe_in[A0_pipe_index(0, node) +: A_WORD_WIDTH] = A_in[(Node_A_in_WIDTH * node) +: A_WORD_WIDTH];
+            for (line=0; line < (PIPE_ARRAY_SIZE-1); line=line+1) begin : A0_pipe_wiring
+                assign Mesh_Node_Line_A_in[((A_in_WIDTH * line) + (Node_A_in_WIDTH * node)) +: A_WORD_WIDTH] = A0_pipe_out[A0_pipe_index(line, node) +: A_WORD_WIDTH];
+                assign A0_pipe_in[A0_pipe_index(line+1, node) +: A_WORD_WIDTH] = Mesh_Node_Line_A_out[((A_out_WIDTH * line) + (Node_A_out_WIDTH * node)) +: A_WORD_WIDTH];
+            end
+            assign A_out[(Node_A_out_WIDTH * node) +: A_WORD_WIDTH] = A0_pipe_out[A0_pipe_index(PIPE_ARRAY_SIZE-1, node) +: A_WORD_WIDTH];
         end
-        assign A_out[(Node_A_out_WIDTH * node) +: A_WORD_WIDTH] = A0_pipe_out[A0_pipe_index(PIPE_ARRAY_SIZE-1, node) +: A_WORD_WIDTH];
-    end
+    endgenerate
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // And again the same for each SIMD lanes' port A0.
@@ -246,22 +248,22 @@ module Mesh_Page
         SIMD_A0_pipe_index = (SIMD_A_WORD_WIDTH * MESH_LINE_NODE_COUNT * line) + (SIMD_A_WORD_WIDTH * node); 
     endfunction
     function integer SIMD_Mesh_Node_A_in_index (input integer line, input integer node);
-        Mesh_Node_A_in_index = (A_in_WIDTH * line) + (Node_A_in_WIDTH * node) + Node_A_in_scalar_WIDTH;
+        SIMD_Mesh_Node_A_in_index = (A_in_WIDTH * line) + (Node_A_in_WIDTH * node) + Node_A_in_scalar_WIDTH;
     endfunction
     function integer SIMD_Mesh_Node_A_out_index (input integer line, input integer node);
-        Mesh_Node_A_out_index = (A_out_WIDTH * line) + (Node_A_out_WIDTH * node) + Node_A_out_scalar_WIDTH;
+        SIMD_Mesh_Node_A_out_index = (A_out_WIDTH * line) + (Node_A_out_WIDTH * node) + Node_A_out_scalar_WIDTH;
     endfunction
 
     generate
-        for (lane=0; lane < SIMD_LANE_COUNT; lane=lane+1) begin
+        for (lane=0; lane < SIMD_LANE_COUNT; lane=lane+1) begin : SIMD_A0_pipe_lane
             wire [(SIMD_A_WORD_WIDTH * PIPE_ARRAY_SIZE * MESH_LINE_NODE_COUNT)-1:0] SIMD_A0_pipe_in;
             wire [(SIMD_A_WORD_WIDTH * PIPE_ARRAY_SIZE * MESH_LINE_NODE_COUNT)-1:0] SIMD_A0_pipe_out;
 
             Mesh_Pipe_Array
             #(
-                .LSB_PIPE_DEPTH     (MESH_EDGE_PIPE_DEPTH),
-                .MID_PIPE_DEPTH     (MESH_NODE_PIPE_DEPTH),
-                .MSB_PIPE_DEPTH     (MESH_EDGE_PIPE_DEPTH),
+                .LSB_PIPE_DEPTH     (MESH_PAGE_EDGE_PIPE_DEPTH),
+                .MID_PIPE_DEPTH     (MESH_PAGE_NODE_PIPE_DEPTH),
+                .MSB_PIPE_DEPTH     (MESH_PAGE_EDGE_PIPE_DEPTH),
                 .WIDTH              (SIMD_A_WORD_WIDTH * MESH_LINE_NODE_COUNT),
                 .PIPE_ARRAY_SIZE    (PIPE_ARRAY_SIZE) 
             )
@@ -272,11 +274,11 @@ module Mesh_Page
                 .out                (SIMD_A0_pipe_out)
             );
             
-            for (node=0; node < MESH_LINE_NODE_COUNT; node=node+1;) begin
+            for (node=0; node < MESH_LINE_NODE_COUNT; node=node+1) begin : SIMD_A0_pipe_node
                 assign SIMD_A0_pipe_in[SIMD_A0_pipe_index(0, node) +: SIMD_A_WORD_WIDTH] = A_in[((Node_A_in_WIDTH * node) + Node_A_in_scalar_WIDTH) +: SIMD_A_WORD_WIDTH];
-                for (line=0; line < (PIPE_ARRAY_SIZE-1); line=line+1;) begin
-                    assign Mesh_Node_A_in[SIMD_Mesh_Node_A_in_index(line, node) +: SIMD_A_WORD_WIDTH] = SIMD_A0_pipe_out[SIMD_A0_pipe_index(line, node) +: SIMD_A_WORD_WIDTH];
-                    assign SIMD_A0_pipe_in[SIMD_A0_pipe_index(line+1, node) +: SIMD_A_WORD_WIDTH] = Mesh_Node_A_out[SIMD_Mesh_Node_A_out_index(line, node) +: SIMD_A_WORD_WIDTH];
+                for (line=0; line < (PIPE_ARRAY_SIZE-1); line=line+1) begin : SIMD_A0_pipe_wiring
+                    assign Mesh_Node_Line_A_in[SIMD_Mesh_Node_A_in_index(line, node) +: SIMD_A_WORD_WIDTH] = SIMD_A0_pipe_out[SIMD_A0_pipe_index(line, node) +: SIMD_A_WORD_WIDTH];
+                    assign SIMD_A0_pipe_in[SIMD_A0_pipe_index(line+1, node) +: SIMD_A_WORD_WIDTH] = Mesh_Node_Line_A_out[SIMD_Mesh_Node_A_out_index(line, node) +: SIMD_A_WORD_WIDTH];
                 end
                 assign A_out[((Node_A_out_WIDTH * node) + Node_A_out_scalar_WIDTH) +: SIMD_A_WORD_WIDTH] = SIMD_A0_pipe_out[SIMD_A0_pipe_index(PIPE_ARRAY_SIZE-1, node) +: SIMD_A_WORD_WIDTH];
             end
@@ -284,14 +286,8 @@ module Mesh_Page
     endgenerate
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Port A1 goes MSB to LSB (top to bottom), so we wire in in a "whipstitch" fashion te reverse the direction of data flow.
+    // Port A1 goes MSB to LSB (top to bottom), so we wire in in a "whipstitch" fashion to reverse the direction of data flow.
     
-    localparam Node_A_in_scalar_WIDTH   = (A_WORD_WIDTH * A_IO_READ_PORT_COUNT);
-    localparam Node_A_out_scalar_WIDTH  = (A_WORD_WIDTH * A_IO_WRITE_PORT_COUNT);
-
-    localparam Node_A_in_WIDTH  = (Node_A_in_scalar_WIDTH   + (SIMD_A_WORD_WIDTH * SIMD_A_IO_READ_PORT_COUNT  * SIMD_LANE_COUNT));
-    localparam Node_A_out_WIDTH = (Node_A_out_scalar_WIDTH  + (SIMD_A_WORD_WIDTH * SIMD_A_IO_WRITE_PORT_COUNT * SIMD_LANE_COUNT));
-
     function integer A1_pipe_index (input integer line, input integer node); A1_pipe_index = ((A_WORD_WIDTH * MESH_LINE_NODE_COUNT * line) + (A_WORD_WIDTH * node)); endfunction
 
     wire [(A_WORD_WIDTH * PIPE_ARRAY_SIZE * MESH_LINE_NODE_COUNT)-1:0] A1_pipe_in;
@@ -299,9 +295,9 @@ module Mesh_Page
 
     Mesh_Pipe_Array
     #(
-        .LSB_PIPE_DEPTH     (MESH_EDGE_PIPE_DEPTH),
-        .MID_PIPE_DEPTH     (MESH_NODE_PIPE_DEPTH),
-        .MSB_PIPE_DEPTH     (MESH_EDGE_PIPE_DEPTH),
+        .LSB_PIPE_DEPTH     (MESH_PAGE_EDGE_PIPE_DEPTH),
+        .MID_PIPE_DEPTH     (MESH_PAGE_NODE_PIPE_DEPTH),
+        .MSB_PIPE_DEPTH     (MESH_PAGE_EDGE_PIPE_DEPTH),
         .WIDTH              (A_WORD_WIDTH * MESH_LINE_NODE_COUNT),
         .PIPE_ARRAY_SIZE    (PIPE_ARRAY_SIZE) 
     )
@@ -312,14 +308,16 @@ module Mesh_Page
         .out                (A1_pipe_out)
     );
     
-    for (node=0; node < MESH_LINE_NODE_COUNT; node=node+1;) begin
-        assign A1_pipe_in[A1_pipe_index(PIPE_ARRAY_SIZE-1, node) +: A_WORD_WIDTH] = A_in[((Node_A_in_WIDTH * node) + A_WORD_WIDTH) +: A_WORD_WIDTH];
-        for (line=PIPE_ARRAY_SIZE-1; line > 0; line=line-1;) begin
-            assign Mesh_Node_A_in[((A_in_WIDTH * line) + (Node_A_in_WIDTH * node) + A_WORD_WIDTH) +: A_WORD_WIDTH] = A1_pipe_out[A1_pipe_index(line, node) +: A_WORD_WIDTH];
-            assign A1_pipe_in[A1_pipe_index(line-1, node) +: A_WORD_WIDTH] = Mesh_Node_A_out[((A_out_WIDTH * line) + (Node_A_out_WIDTH * node) + A_WORD_WIDTH) +: A_WORD_WIDTH];
+    generate
+        for (node=0; node < MESH_LINE_NODE_COUNT; node=node+1) begin : A1_pipe_node
+            assign A1_pipe_in[A1_pipe_index(PIPE_ARRAY_SIZE-1, node) +: A_WORD_WIDTH] = A_in[((Node_A_in_WIDTH * node) + A_WORD_WIDTH) +: A_WORD_WIDTH];
+            for (line=PIPE_ARRAY_SIZE-1; line > 0; line=line-1) begin: A1_pipe_wiring
+                assign Mesh_Node_Line_A_in[((A_in_WIDTH * (line-1)) + (Node_A_in_WIDTH * node) + A_WORD_WIDTH) +: A_WORD_WIDTH] = A1_pipe_out[A1_pipe_index(line, node) +: A_WORD_WIDTH];
+                assign A1_pipe_in[A1_pipe_index(line-1, node) +: A_WORD_WIDTH] = Mesh_Node_Line_A_out[((A_out_WIDTH * (line-1)) + (Node_A_out_WIDTH * node) + A_WORD_WIDTH) +: A_WORD_WIDTH];
+            end
+            assign A_out[((Node_A_out_WIDTH * node) + A_WORD_WIDTH) +: A_WORD_WIDTH] = A1_pipe_out[A1_pipe_index(0, node) +: A_WORD_WIDTH];
         end
-        assign A_out[((Node_A_out_WIDTH * node) + A_WORD_WIDTH) +: A_WORD_WIDTH] = A1_pipe_out[A1_pipe_index(0, node) +: A_WORD_WIDTH];
-    end
+    endgenerate
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // And again the same for each SIMD lanes' port A1.
@@ -329,15 +327,15 @@ module Mesh_Page
     function integer SIMD_A_out_index (input integer node); SIMD_A_out_index = (Node_A_out_WIDTH * node) + Node_A_out_scalar_WIDTH + SIMD_A_WORD_WIDTH; endfunction
     
     generate
-        for (lane=0; lane < SIMD_LANE_COUNT; lane=lane+1) begin
+        for (lane=0; lane < SIMD_LANE_COUNT; lane=lane+1) begin : SIMD_A1_pipe_lane
             wire [(SIMD_A_WORD_WIDTH * PIPE_ARRAY_SIZE * MESH_LINE_NODE_COUNT)-1:0] SIMD_A1_pipe_in;
             wire [(SIMD_A_WORD_WIDTH * PIPE_ARRAY_SIZE * MESH_LINE_NODE_COUNT)-1:0] SIMD_A1_pipe_out;
 
             Mesh_Pipe_Array
             #(
-                .LSB_PIPE_DEPTH     (MESH_EDGE_PIPE_DEPTH),
-                .MID_PIPE_DEPTH     (MESH_NODE_PIPE_DEPTH),
-                .MSB_PIPE_DEPTH     (MESH_EDGE_PIPE_DEPTH),
+                .LSB_PIPE_DEPTH     (MESH_PAGE_EDGE_PIPE_DEPTH),
+                .MID_PIPE_DEPTH     (MESH_PAGE_NODE_PIPE_DEPTH),
+                .MSB_PIPE_DEPTH     (MESH_PAGE_EDGE_PIPE_DEPTH),
                 .WIDTH              (SIMD_A_WORD_WIDTH * MESH_LINE_NODE_COUNT),
                 .PIPE_ARRAY_SIZE    (PIPE_ARRAY_SIZE) 
             )
@@ -348,11 +346,11 @@ module Mesh_Page
                 .out                (SIMD_A1_pipe_out)
             );
             
-            for (node=0; node < MESH_LINE_NODE_COUNT; node=node+1;) begin
-                assign SIMD_A1_pipe_in[SIMD_A1_pipe_index(PIPE_ARRAY_SIZE-1, node) +: SIMD_A_WORD_WIDTH] = A_in[SIMD_A_in_index(node) + SIMD_A_WORD_WIDTH) +: SIMD_A_WORD_WIDTH];
-                for (line=PIPE_ARRAY_SIZE-1; line > 0; line=line-1;) begin
-                    assign Mesh_Node_A_in[(SIMD_Mesh_Node_A_in_index(line, node) + SIMD_A_WORD_WIDTH) +: SIMD_A_WORD_WIDTH] = SIMD_A1_pipe_out[SIMD_A1_pipe_index(line, node) +: SIMD_A_WORD_WIDTH];
-                    assign SIMD_A1_pipe_in[SIMD_A1_pipe_index(line-1, node) +: SIMD_A_WORD_WIDTH] = Mesh_Node_A_out[(SIMD_Mesh_Node_A_out_index(line, node) + SIMD_A_WORD_WIDTH) +: SIMD_A_WORD_WIDTH];
+            for (node=0; node < MESH_LINE_NODE_COUNT; node=node+1) begin : SIMD_A1_pipe_node
+                assign SIMD_A1_pipe_in[SIMD_A1_pipe_index(PIPE_ARRAY_SIZE-1, node) +: SIMD_A_WORD_WIDTH] = A_in[(SIMD_A_in_index(node) + SIMD_A_WORD_WIDTH) +: SIMD_A_WORD_WIDTH];
+                for (line=PIPE_ARRAY_SIZE-1; line > 0; line=line-1) begin : SIMD_A1_pipe_lane
+                    assign Mesh_Node_Line_A_in[(SIMD_Mesh_Node_A_in_index(line, node) + SIMD_A_WORD_WIDTH) +: SIMD_A_WORD_WIDTH] = SIMD_A1_pipe_out[SIMD_A1_pipe_index(line, node) +: SIMD_A_WORD_WIDTH];
+                    assign SIMD_A1_pipe_in[SIMD_A1_pipe_index(line-1, node) +: SIMD_A_WORD_WIDTH] = Mesh_Node_Line_A_out[(SIMD_Mesh_Node_A_out_index(line, node) + SIMD_A_WORD_WIDTH) +: SIMD_A_WORD_WIDTH];
                 end
                 assign A_out[SIMD_A_out_index(node) +: SIMD_A_WORD_WIDTH] = SIMD_A1_pipe_out[SIMD_A1_pipe_index(0, node) +: SIMD_A_WORD_WIDTH];
             end
@@ -473,14 +471,14 @@ module Mesh_Page
         .ALU_c_in                           (Mesh_Node_Line_ALU_c_in),
         .ALU_c_out                          (Mesh_Node_Line_ALU_c_out),
 
-        .A_io_rden                          (Mesh_Node_Line_A_rden),
-        .A_io_in                            (Mesh_Node_Line_A_in),
-        .A_io_out                           (Mesh_Node_Line_A_out),
-        .A_io_wren                          (Mesh_Node_Line_A_wren),
+        .A_rden                             (Mesh_Node_Line_A_rden),
+        .A_in                               (Mesh_Node_Line_A_in),
+        .A_out                              (Mesh_Node_Line_A_out),
+        .A_wren                             (Mesh_Node_Line_A_wren),
         
-        .B_io_rden                          (Mesh_Node_Line_B_rden),
-        .B_io_in                            (Mesh_Node_Line_B_in),
-        .B_io_out                           (Mesh_Node_Line_B_out),
-        .B_io_wren                          (Mesh_Node_Line_B_wren)
+        .B_rden                             (Mesh_Node_Line_B_rden),
+        .B_in                               (Mesh_Node_Line_B_in),
+        .B_out                              (Mesh_Node_Line_B_out),
+        .B_wren                             (Mesh_Node_Line_B_wren)
     );
 endmodule
