@@ -149,80 +149,179 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
     // ****** A PORT INPUT ******
     shift_register
     #(
-        .WIDTH          (A_IO_READ_PORT_WIDTH_ALL)
+        .WIDTH          (A_WORD_WIDTH)
     )
-    input_harness_A     [MESH_A_IO_READ_PORT_COUNT_ALL-1:0]
+    input_harness_A     [A_IO_READ_PORT_COUNT-1:0]
     (
         .clock          (clock),
-        .input_port     (A_in),
-        .read_enable    (dut_A_rden),
-        .output_port    (dut_A_in)
+        .input_port     (A_in       [0 +: A_IO_READ_PORT_COUNT]),
+        .read_enable    (dut_A_rden [0 +: A_IO_READ_PORT_COUNT]),
+        .output_port    (dut_A_in   [0 +: A_IO_READ_PORT_WIDTH])
     );
+
+    generate
+        if (SIMD_LANE_COUNT > 0) begin
+            shift_register
+            #(
+                .WIDTH              (SIMD_A_WORD_WIDTH)
+            )
+            SIMD_input_harness_A    [SIMD_A_IO_READ_PORT_COUNT_TOTAL-1:0]
+            (
+                .clock              (clock),
+                .input_port         (A_in       [A_IO_READ_PORT_COUNT_ALL-1 : A_IO_READ_PORT_COUNT]),
+                .read_enable        (dut_A_rden [A_IO_READ_PORT_COUNT_ALL-1 : A_IO_READ_PORT_COUNT]),
+                .output_port        (dut_A_in   [A_IO_READ_PORT_WIDTH_ALL-1 : A_IO_READ_PORT_WIDTH])
+            );
+        end
+    endgenerate
+
+
+
 
     // ****** B PORT INPUT ******
     shift_register
     #(
-        .WIDTH          (B_IO_READ_PORT_WIDTH_ALL)
+        .WIDTH          (B_WORD_WIDTH)
     )
-    input_harness_B     [MESH_B_IO_READ_PORT_COUNT_ALL-1:0]
+    input_harness_B     [B_IO_READ_PORT_COUNT-1:0]
     (
         .clock          (clock),
-        .input_port     (A_in),
-        .read_enable    (dut_A_rden),
-        .output_port    (dut_A_in)
+        .input_port     (B_in       [0 +: B_IO_READ_PORT_COUNT]),
+        .read_enable    (dut_B_rden [0 +: B_IO_READ_PORT_COUNT]),
+        .output_port    (dut_B_in   [0 +: B_IO_READ_PORT_WIDTH])
     );
 
+    generate
+        if (SIMD_LANE_COUNT > 0) begin
+            shift_register
+            #(
+                .WIDTH              (SIMD_B_WORD_WIDTH)
+            )
+            SIMD_input_harness_B    [SIMD_B_IO_READ_PORT_COUNT_TOTAL-1:0]
+            (
+                .clock              (clock),
+                .input_port         (B_in       [B_IO_READ_PORT_COUNT_ALL-1 : B_IO_READ_PORT_COUNT]),
+                .read_enable        (dut_B_rden [B_IO_READ_PORT_COUNT_ALL-1 : B_IO_READ_PORT_COUNT]),
+                .output_port        (dut_B_in   [B_IO_READ_PORT_WIDTH_ALL-1 : B_IO_READ_PORT_WIDTH])
+            );
+        end
+    endgenerate
+
+
+
+
     // ****** A PORT OUTPUT ******
-    wire    [MESH_A_IO_WRITE_PORT_WIDTH_ALL-1:0]     out_A;
+    wire    [A_IO_WRITE_PORT_WIDTH-1:0]     out_A;
     
     output_register
     #(
-        .WIDTH          (A_IO_WRITE_PORT_WIDTH_ALL)
+        .WIDTH          (A_WORD_WIDTH)
     )
-    or_out_A            [MESH_A_IO_WRITE_PORT_COUNT_ALL-1:0]
+    or_out_A            [A_IO_WRITE_PORT_COUNT-1:0]
     (
         .clock          (clock),
-        .in             (dut_A_out),
-        .wren           (dut_A_wren),
+        .in             (dut_A_out [0 +: A_IO_WRITE_PORT_WIDTH]),
+        .wren           (dut_A_wren[0 +: A_IO_WRITE_PORT_COUNT]),
         .out            (out_A)
     );
 
     registered_reducer
     #(
-        .WIDTH          (A_IO_WRITE_PORT_WIDTH_ALL)
+        .WIDTH          (A_WORD_WIDTH)
     ) 
-    rr_out_A            [MESH_A_IO_WRITE_PORT_COUNT_ALL-1:0]
+    rr_out_A            [A_IO_WRITE_PORT_COUNT-1:0]
     (
         .clock          (clock),
         .input_port     (out_A),
-        .output_port    (A_out)
+        .output_port    (A_out[0 +: A_IO_WRITE_PORT_COUNT])
     );
 
+    generate
+        if (SIMD_LANE_COUNT > 0) begin
+            wire    [SIMD_A_IO_WRITE_PORT_WIDTH_TOTAL-1:0]  SIMD_out_A;
+            
+            output_register
+            #(
+                .WIDTH          (SIMD_A_WORD_WIDTH)
+            )
+            SIMD_or_out_A       [SIMD_A_IO_WRITE_PORT_COUNT_TOTAL-1:0]
+            (
+                .clock          (clock),
+                .in             (dut_A_out [A_IO_WRITE_PORT_WIDTH_ALL-1 : A_IO_WRITE_PORT_WIDTH]),
+                .wren           (dut_A_wren[A_IO_WRITE_PORT_COUNT_ALL-1 : A_IO_WRITE_PORT_COUNT]),
+                .out            (SIMD_out_A)
+            );
+
+            registered_reducer
+            #(
+                .WIDTH          (SIMD_A_WORD_WIDTH)
+            ) 
+            SIMD_rr_out_A       [SIMD_A_IO_WRITE_PORT_COUNT_TOTAL-1:0]
+            (
+                .clock          (clock),
+                .input_port     (SIMD_out_A),
+                .output_port    (A_out[A_IO_WRITE_PORT_COUNT_ALL-1 : A_IO_WRITE_PORT_COUNT])
+            );
+        end
+    endgenerate
+
+
+
+
     // ****** B PORT OUTPUT ******
-    wire    [MESH_B_IO_WRITE_PORT_WIDTH_ALL-1:0]     out_B;
+    wire    [B_IO_WRITE_PORT_WIDTH-1:0]     out_B;
     
     output_register
     #(
-        .WIDTH          (B_IO_WRITE_PORT_WIDTH_ALL)
+        .WIDTH          (B_WORD_WIDTH)
     )
-    or_out_B            [MESH_B_IO_WRITE_PORT_COUNT_ALL-1:0]
+    or_out_B            [B_IO_WRITE_PORT_COUNT-1:0]
     (
         .clock          (clock),
-        .in             (dut_B_out),
-        .wren           (dut_B_wren),
+        .in             (dut_B_out [0 +: B_IO_WRITE_PORT_WIDTH]),
+        .wren           (dut_B_wren[0 +: B_IO_WRITE_PORT_COUNT]),
         .out            (out_B)
     );
 
     registered_reducer
     #(
-        .WIDTH          (B_IO_WRITE_PORT_WIDTH_ALL)
+        .WIDTH          (B_WORD_WIDTH)
     ) 
-    rr_out_B            [MESH_B_IO_WRITE_PORT_COUNT_ALL-1:0]
+    rr_out_B            [B_IO_WRITE_PORT_COUNT-1:0]
     (
         .clock          (clock),
         .input_port     (out_B),
-        .output_port    (B_out)
+        .output_port    (B_out[0 +: B_IO_WRITE_PORT_COUNT])
     );
+
+    generate
+        if (SIMD_LANE_COUNT > 0) begin
+            wire    [SIMD_B_IO_WRITE_PORT_WIDTH_TOTAL-1:0]  SIMD_out_B;
+            
+            output_register
+            #(
+                .WIDTH          (SIMD_B_WORD_WIDTH)
+            )
+            SIMD_or_out_B       [SIMD_B_IO_WRITE_PORT_COUNT_TOTAL-1:0]
+            (
+                .clock          (clock),
+                .in             (dut_B_out [B_IO_WRITE_PORT_WIDTH_ALL-1 : B_IO_WRITE_PORT_WIDTH]),
+                .wren           (dut_B_wren[B_IO_WRITE_PORT_COUNT_ALL-1 : B_IO_WRITE_PORT_COUNT]),
+                .out            (SIMD_out_B)
+            );
+
+            registered_reducer
+            #(
+                .WIDTH          (SIMD_B_WORD_WIDTH)
+            ) 
+            SIMD_rr_out_B       [SIMD_B_IO_WRITE_PORT_COUNT_TOTAL-1:0]
+            (
+                .clock          (clock),
+                .input_port     (SIMD_out_B),
+                .output_port    (B_out[B_IO_WRITE_PORT_COUNT_ALL-1 : B_IO_WRITE_PORT_COUNT])
+            );
+        end
+    endgenerate
 endmodule
 """)
     parameters["default_memory_init"] = default_memory_init
