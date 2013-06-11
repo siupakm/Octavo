@@ -289,7 +289,7 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
 
     // ****** B PORT OUTPUT ******
     generate
-        for (node = 0; node < MESH_LINE_NODE_COUNT; node = node + 1) begin : test_harness_B_out
+        for (node = 0; node < MESH_PAGE_LINE_COUNT; node = node + 1) begin : test_harness_B_out
             wire    [B_IO_WRITE_PORT_WIDTH-1:0]     out_B;
             
             output_register
