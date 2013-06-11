@@ -151,18 +151,23 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
     );
 
     genvar node;
-    genvar node_width_offset;
-    genvar node_count_offset;
     genvar lane;
-    genvar lane_width_offset;
-    genvar lane_count_offset;
+
+    function integer node_width_offset (input integer node); node_width_offset = node * A_IO_READ_PORT_WIDTH_ALL; endfunction
+    function integer node_count_offset (input integer node); node_count_offset = node * A_IO_READ_PORT_COUNT_ALL; endfunction
+
+    function integer lane_width_offset (input integer node, input integer lane);
+        lane_width_offset = node_width_offset(node) + (lane * SIMD_A_IO_READ_PORT_WIDTH) + A_IO_READ_PORT_WIDTH;
+    endfunction
+
+    function integer lane_count_offset (input integer node, input integer lane);
+        lane_count_offset = node_count_offset(node) + (lane * SIMD_A_IO_READ_PORT_COUNT) + A_IO_READ_PORT_COUNT;
+    endfunction
+
 
     // ****** A PORT INPUT ******
     generate
-        for (node = 0; node < MESH_LINE_NODE_COUNT; node = node + 1) begin
-            node_width_offset = node * A_IO_READ_PORT_WIDTH_ALL;
-            node_count_offset = node * A_IO_READ_PORT_COUNT_ALL;
-
+        for (node = 0; node < MESH_LINE_NODE_COUNT; node = node + 1) begin : test_harness_A_in
             shift_register
             #(
                 .WIDTH          (A_WORD_WIDTH)
@@ -170,14 +175,12 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
             input_harness_A     [A_IO_READ_PORT_COUNT-1:0]
             (
                 .clock          (clock),
-                .input_port     (A_in       [node_count_offset +: A_IO_READ_PORT_COUNT]),
-                .read_enable    (dut_A_rden [node_count_offset +: A_IO_READ_PORT_COUNT]),
-                .output_port    (dut_A_in   [node_width_offset +: A_IO_READ_PORT_WIDTH])
+                .input_port     (A_in       [node_count_offset(node) +: A_IO_READ_PORT_COUNT]),
+                .read_enable    (dut_A_rden [node_count_offset(node) +: A_IO_READ_PORT_COUNT]),
+                .output_port    (dut_A_in   [node_width_offset(node) +: A_IO_READ_PORT_WIDTH])
             );
 
-            for (lane = 0; lane < SIMD_LANE_COUNT; lane = lane + 1) begin
-                lane_width_offset = node_width_offset + (lane * SIMD_A_IO_READ_PORT_WIDTH) + A_IO_READ_PORT_WIDTH;
-                lane_count_offset = node_count_offset + (lane * SIMD_A_IO_READ_PORT_COUNT) + A_IO_READ_PORT_COUNT;
+            for (lane = 0; lane < SIMD_LANE_COUNT; lane = lane + 1) begin : simd_test_harness_A_in
                 shift_register
                 #(
                     .WIDTH              (SIMD_A_WORD_WIDTH)
@@ -185,9 +188,9 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
                 SIMD_input_harness_A    [SIMD_A_IO_READ_PORT_COUNT-1:0]
                 (
                     .clock              (clock),
-                    .input_port         (A_in       [lane_count_offset +: SIMD_A_IO_READ_PORT_COUNT]),
-                    .read_enable        (dut_A_rden [lane_count_offset +: SIMD_A_IO_READ_PORT_COUNT]),
-                    .output_port        (dut_A_in   [lane_width_offset +: SIMD_A_IO_READ_PORT_WIDTH])
+                    .input_port         (A_in       [lane_count_offset(node, lane) +: SIMD_A_IO_READ_PORT_COUNT]),
+                    .read_enable        (dut_A_rden [lane_count_offset(node, lane) +: SIMD_A_IO_READ_PORT_COUNT]),
+                    .output_port        (dut_A_in   [lane_width_offset(node, lane) +: SIMD_A_IO_READ_PORT_WIDTH])
                 );
             end
         end
@@ -196,10 +199,7 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
 
     // ****** B PORT INPUT ******
     generate
-        for (node = 0; node < MESH_PAGE_LINE_COUNT; node = node + 1) begin
-            node_width_offset = node * B_IO_READ_PORT_WIDTH_ALL;
-            node_count_offset = node * B_IO_READ_PORT_COUNT_ALL;
-
+        for (node = 0; node < MESH_PAGE_LINE_COUNT; node = node + 1) begin : test_harness_B_in
             shift_register
             #(
                 .WIDTH          (B_WORD_WIDTH)
@@ -207,14 +207,12 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
             input_harness_B     [B_IO_READ_PORT_COUNT-1:0]
             (
                 .clock          (clock),
-                .input_port     (B_in       [node_count_offset +: B_IO_READ_PORT_COUNT]),
-                .read_enable    (dut_B_rden [node_count_offset +: B_IO_READ_PORT_COUNT]),
-                .output_port    (dut_B_in   [node_width_offset +: B_IO_READ_PORT_WIDTH])
+                .input_port     (B_in       [node_count_offset(node) +: B_IO_READ_PORT_COUNT]),
+                .read_enable    (dut_B_rden [node_count_offset(node) +: B_IO_READ_PORT_COUNT]),
+                .output_port    (dut_B_in   [node_width_offset(node) +: B_IO_READ_PORT_WIDTH])
             );
 
-            for (lane = 0; lane < SIMD_LANE_COUNT; lane = lane + 1) begin
-                lane_width_offset = node_width_offset + (lane * SIMD_B_IO_READ_PORT_WIDTH) + B_IO_READ_PORT_WIDTH;
-                lane_count_offset = node_count_offset + (lane * SIMD_B_IO_READ_PORT_COUNT) + B_IO_READ_PORT_COUNT;
+            for (lane = 0; lane < SIMD_LANE_COUNT; lane = lane + 1) begin : simd_test_harness_B_in
                 shift_register
                 #(
                     .WIDTH              (SIMD_B_WORD_WIDTH)
@@ -222,9 +220,9 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
                 SIMD_input_harness_B    [SIMD_B_IO_READ_PORT_COUNT-1:0]
                 (
                     .clock              (clock),
-                    .input_port         (B_in       [lane_count_offset +: SIMD_B_IO_READ_PORT_COUNT]),
-                    .read_enable        (dut_B_rden [lane_count_offset +: SIMD_B_IO_READ_PORT_COUNT]),
-                    .output_port        (dut_B_in   [lane_width_offset +: SIMD_B_IO_READ_PORT_WIDTH])
+                    .input_port         (B_in       [lane_count_offset(node, lane) +: SIMD_B_IO_READ_PORT_COUNT]),
+                    .read_enable        (dut_B_rden [lane_count_offset(node, lane) +: SIMD_B_IO_READ_PORT_COUNT]),
+                    .output_port        (dut_B_in   [lane_width_offset(node, lane) +: SIMD_B_IO_READ_PORT_WIDTH])
                 );
             end
         end
@@ -233,10 +231,7 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
 
     // ****** A PORT OUTPUT ******
     generate
-        for (node = 0; node < MESH_LINE_NODE_COUNT; node = node + 1) begin
-            node_width_offset = node * A_IO_WRITE_PORT_WIDTH_ALL;
-            node_count_offset = node * A_IO_WRITE_PORT_COUNT_ALL;
-
+        for (node = 0; node < MESH_LINE_NODE_COUNT; node = node + 1) begin : test_harness_A_out
             wire    [A_IO_WRITE_PORT_WIDTH-1:0]     out_A;
             
             output_register
@@ -246,8 +241,8 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
             or_out_A            [A_IO_WRITE_PORT_COUNT-1:0]
             (
                 .clock          (clock),
-                .in             (dut_A_out  [node_width_offset +: A_IO_WRITE_PORT_WIDTH]),
-                .wren           (dut_A_wren [node_count_offset +: A_IO_WRITE_PORT_COUNT]),
+                .in             (dut_A_out  [node_width_offset(node) +: A_IO_WRITE_PORT_WIDTH]),
+                .wren           (dut_A_wren [node_count_offset(node) +: A_IO_WRITE_PORT_COUNT]),
                 .out            (out_A)
             );
 
@@ -259,13 +254,10 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
             (
                 .clock          (clock),
                 .input_port     (out_A),
-                .output_port    (A_out      [node_count_offset +: A_IO_WRITE_PORT_COUNT])
+                .output_port    (A_out      [node_count_offset(node) +: A_IO_WRITE_PORT_COUNT])
             );
 
-            for (lane = 0; lane < SIMD_LANE_COUNT; lane = lane + 1) begin
-                lane_width_offset = node_width_offset + (lane * SIMD_A_IO_READ_PORT_WIDTH) + A_IO_READ_PORT_WIDTH;
-                lane_count_offset = node_count_offset + (lane * SIMD_A_IO_READ_PORT_COUNT) + A_IO_READ_PORT_COUNT;
-
+            for (lane = 0; lane < SIMD_LANE_COUNT; lane = lane + 1) begin : simd_test_harness_A_out
                 wire    [SIMD_A_IO_WRITE_PORT_WIDTH_TOTAL-1:0]  SIMD_out_A;
                 
                 output_register
@@ -275,8 +267,8 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
                 SIMD_or_out_A       [SIMD_A_IO_WRITE_PORT_COUNT_TOTAL-1:0]
                 (
                     .clock          (clock),
-                    .in             (dut_A_out  [lane_width_offset +: SIMD_A_IO_WRITE_PORT_WIDTH]),
-                    .wren           (dut_A_wren [lane_count_offset +: SIMD_A_IO_WRITE_PORT_COUNT]),
+                    .in             (dut_A_out  [lane_width_offset(node, lane) +: SIMD_A_IO_WRITE_PORT_WIDTH]),
+                    .wren           (dut_A_wren [lane_count_offset(node, lane) +: SIMD_A_IO_WRITE_PORT_COUNT]),
                     .out            (SIMD_out_A)
                 );
 
@@ -288,7 +280,7 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
                 (
                     .clock          (clock),
                     .input_port     (SIMD_out_A),
-                    .output_port    (A_out      [lane_count_offset +: SIMD_A_IO_WRITE_PORT_COUNT])
+                    .output_port    (A_out      [lane_count_offset(node, lane) +: SIMD_A_IO_WRITE_PORT_COUNT])
                 );
             end
         end
@@ -297,10 +289,7 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
 
     // ****** B PORT OUTPUT ******
     generate
-        for (node = 0; node < MESH_LINE_NODE_COUNT; node = node + 1) begin
-            node_width_offset = node * B_IO_WRITE_PORT_WIDTH_ALL;
-            node_count_offset = node * B_IO_WRITE_PORT_COUNT_ALL;
-
+        for (node = 0; node < MESH_LINE_NODE_COUNT; node = node + 1) begin : test_harness_B_out
             wire    [B_IO_WRITE_PORT_WIDTH-1:0]     out_B;
             
             output_register
@@ -310,8 +299,8 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
             or_out_A            [B_IO_WRITE_PORT_COUNT-1:0]
             (
                 .clock          (clock),
-                .in             (dut_B_out  [node_width_offset +: B_IO_WRITE_PORT_WIDTH]),
-                .wren           (dut_B_wren [node_count_offset +: B_IO_WRITE_PORT_COUNT]),
+                .in             (dut_B_out  [node_width_offset(node) +: B_IO_WRITE_PORT_WIDTH]),
+                .wren           (dut_B_wren [node_count_offset(node) +: B_IO_WRITE_PORT_COUNT]),
                 .out            (out_B)
             );
 
@@ -323,13 +312,10 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
             (
                 .clock          (clock),
                 .input_port     (out_B),
-                .output_port    (B_out      [node_count_offset +: B_IO_WRITE_PORT_COUNT])
+                .output_port    (B_out      [node_count_offset(node) +: B_IO_WRITE_PORT_COUNT])
             );
 
-            for (lane = 0; lane < SIMD_LANE_COUNT; lane = lane + 1) begin
-                lane_width_offset = node_width_offset + (lane * SIMD_B_IO_READ_PORT_WIDTH) + B_IO_READ_PORT_WIDTH;
-                lane_count_offset = node_count_offset + (lane * SIMD_B_IO_READ_PORT_COUNT) + B_IO_READ_PORT_COUNT;
-
+            for (lane = 0; lane < SIMD_LANE_COUNT; lane = lane + 1) begin : simd_test_harness_B_out
                 wire    [SIMD_B_IO_WRITE_PORT_WIDTH_TOTAL-1:0]  SIMD_out_B;
                 
                 output_register
@@ -339,8 +325,8 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
                 SIMD_or_out_B       [SIMD_B_IO_WRITE_PORT_COUNT_TOTAL-1:0]
                 (
                     .clock          (clock),
-                    .in             (dut_B_out  [lane_width_offset +: SIMD_B_IO_WRITE_PORT_WIDTH]),
-                    .wren           (dut_B_wren [lane_count_offset +: SIMD_B_IO_WRITE_PORT_COUNT]),
+                    .in             (dut_B_out  [lane_width_offset(node, lane) +: SIMD_B_IO_WRITE_PORT_WIDTH]),
+                    .wren           (dut_B_wren [lane_count_offset(node, lane) +: SIMD_B_IO_WRITE_PORT_COUNT]),
                     .out            (SIMD_out_B)
                 );
 
@@ -352,7 +338,7 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
                 (
                     .clock          (clock),
                     .input_port     (SIMD_out_B),
-                    .output_port    (B_out      [lane_count_offset +: SIMD_B_IO_WRITE_PORT_COUNT])
+                    .output_port    (B_out      [lane_count_offset(node, lane) +: SIMD_B_IO_WRITE_PORT_COUNT])
                 );
             end
         end
