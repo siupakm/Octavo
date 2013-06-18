@@ -207,8 +207,11 @@ module Mesh_Page
     localparam Node_A_in_scalar_WIDTH   = (A_WORD_WIDTH * A_IO_READ_PORT_COUNT);
     localparam Node_A_out_scalar_WIDTH  = (A_WORD_WIDTH * A_IO_WRITE_PORT_COUNT);
 
-    localparam Node_A_in_WIDTH  = (Node_A_in_scalar_WIDTH   + (SIMD_A_WORD_WIDTH * SIMD_A_IO_READ_PORT_COUNT  * SIMD_LANE_COUNT));
-    localparam Node_A_out_WIDTH = (Node_A_out_scalar_WIDTH  + (SIMD_A_WORD_WIDTH * SIMD_A_IO_WRITE_PORT_COUNT * SIMD_LANE_COUNT));
+    localparam Node_A_in_SIMD_WIDTH   = (SIMD_A_WORD_WIDTH * SIMD_A_IO_READ_PORT_COUNT);
+    localparam Node_A_out_SIMD_WIDTH  = (SIMD_A_WORD_WIDTH * SIMD_A_IO_WRITE_PORT_COUNT);
+
+    localparam Node_A_in_WIDTH  = (Node_A_in_scalar_WIDTH   + (Node_A_in_SIMD_WIDTH  * SIMD_LANE_COUNT));
+    localparam Node_A_out_WIDTH = (Node_A_out_scalar_WIDTH  + (Node_A_out_SIMD_WIDTH * SIMD_LANE_COUNT));
 
     function integer A0_pipe_index (input integer line, input integer node); A0_pipe_index = ((A_WORD_WIDTH * MESH_LINE_NODE_COUNT * line) + (A_WORD_WIDTH * node)); endfunction
 
@@ -247,11 +250,21 @@ module Mesh_Page
     function integer SIMD_A0_pipe_index (input integer line, input integer node); 
         SIMD_A0_pipe_index = (SIMD_A_WORD_WIDTH * MESH_LINE_NODE_COUNT * line) + (SIMD_A_WORD_WIDTH * node); 
     endfunction
-    function integer SIMD_Mesh_Node_A_in_index (input integer line, input integer node);
-        SIMD_Mesh_Node_A_in_index = (A_in_WIDTH * line) + (Node_A_in_WIDTH * node) + Node_A_in_scalar_WIDTH;
+
+    function integer SIMD_A_in_index (input integer node, input integer lane);
+        SIMD_A_in_index = (Node_A_in_WIDTH * node) + Node_A_in_scalar_WIDTH + (Node_A_in_SIMD_WIDTH * lane);
     endfunction
-    function integer SIMD_Mesh_Node_A_out_index (input integer line, input integer node);
-        SIMD_Mesh_Node_A_out_index = (A_out_WIDTH * line) + (Node_A_out_WIDTH * node) + Node_A_out_scalar_WIDTH;
+
+    function integer SIMD_A_out_index (input integer node, input integer lane);
+        SIMD_A_out_index = (Node_A_out_WIDTH * node) + Node_A_out_scalar_WIDTH + (Node_A_out_SIMD_WIDTH * lane);
+    endfunction
+
+    function integer SIMD_Mesh_Node_A_in_index (input integer line, input integer node, input integer lane);
+        SIMD_Mesh_Node_A_in_index = (A_in_WIDTH * line) + SIMD_A_in_index(node, lane);
+    endfunction
+
+    function integer SIMD_Mesh_Node_A_out_index (input integer line, input integer node, input integer lane);
+        SIMD_Mesh_Node_A_out_index = (A_out_WIDTH * line) + SIMD_A_out_index(node, lane);
     endfunction
 
     generate
@@ -275,12 +288,12 @@ module Mesh_Page
             );
             
             for (node=0; node < MESH_LINE_NODE_COUNT; node=node+1) begin : SIMD_A0_pipe_node
-                assign SIMD_A0_pipe_in[SIMD_A0_pipe_index(0, node) +: SIMD_A_WORD_WIDTH] = A_in[((Node_A_in_WIDTH * node) + Node_A_in_scalar_WIDTH) +: SIMD_A_WORD_WIDTH];
+                assign SIMD_A0_pipe_in[SIMD_A0_pipe_index(0, node) +: SIMD_A_WORD_WIDTH] = A_in[SIMD_A_in_index(node, lane) +: SIMD_A_WORD_WIDTH];
                 for (line=0; line < (PIPE_ARRAY_SIZE-1); line=line+1) begin : SIMD_A0_pipe_wiring
-                    assign Mesh_Node_Line_A_in[SIMD_Mesh_Node_A_in_index(line, node) +: SIMD_A_WORD_WIDTH] = SIMD_A0_pipe_out[SIMD_A0_pipe_index(line, node) +: SIMD_A_WORD_WIDTH];
-                    assign SIMD_A0_pipe_in[SIMD_A0_pipe_index(line+1, node) +: SIMD_A_WORD_WIDTH] = Mesh_Node_Line_A_out[SIMD_Mesh_Node_A_out_index(line, node) +: SIMD_A_WORD_WIDTH];
+                    assign Mesh_Node_Line_A_in[SIMD_Mesh_Node_A_in_index(line, node, lane) +: SIMD_A_WORD_WIDTH] = SIMD_A0_pipe_out[SIMD_A0_pipe_index(line, node) +: SIMD_A_WORD_WIDTH];
+                    assign SIMD_A0_pipe_in[SIMD_A0_pipe_index(line+1, node) +: SIMD_A_WORD_WIDTH] = Mesh_Node_Line_A_out[SIMD_Mesh_Node_A_out_index(line, node, lane) +: SIMD_A_WORD_WIDTH];
                 end
-                assign A_out[((Node_A_out_WIDTH * node) + Node_A_out_scalar_WIDTH) +: SIMD_A_WORD_WIDTH] = SIMD_A0_pipe_out[SIMD_A0_pipe_index(PIPE_ARRAY_SIZE-1, node) +: SIMD_A_WORD_WIDTH];
+                assign A_out[SIMD_A_out_index(node, lane) +: SIMD_A_WORD_WIDTH] = SIMD_A0_pipe_out[SIMD_A0_pipe_index(PIPE_ARRAY_SIZE-1, node) +: SIMD_A_WORD_WIDTH];
             end
         end
     endgenerate
@@ -322,10 +335,10 @@ module Mesh_Page
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // And again the same for each SIMD lanes' port A1.
 
-    // See index functions for SIMD ports A0. We add SIMD_A_WORD_WIDTH here to index into A1 instead.
-    function integer SIMD_A_in_index  (input integer node); SIMD_A_in_index  = (Node_A_in_WIDTH  * node) + Node_A_in_scalar_WIDTH  + SIMD_A_WORD_WIDTH; endfunction
-    function integer SIMD_A_out_index (input integer node); SIMD_A_out_index = (Node_A_out_WIDTH * node) + Node_A_out_scalar_WIDTH + SIMD_A_WORD_WIDTH; endfunction
-    
+    function integer SIMD_A1_pipe_index (input integer line, input integer node); 
+        SIMD_A1_pipe_index = (SIMD_A_WORD_WIDTH * MESH_LINE_NODE_COUNT * line) + (SIMD_A_WORD_WIDTH * node); 
+    endfunction
+
     generate
         for (lane=0; lane < SIMD_LANE_COUNT; lane=lane+1) begin : SIMD_A1_pipe_lane
             wire [(SIMD_A_WORD_WIDTH * PIPE_ARRAY_SIZE * MESH_LINE_NODE_COUNT)-1:0] SIMD_A1_pipe_in;
@@ -347,12 +360,13 @@ module Mesh_Page
             );
             
             for (node=0; node < MESH_LINE_NODE_COUNT; node=node+1) begin : SIMD_A1_pipe_node
-                assign SIMD_A1_pipe_in[SIMD_A1_pipe_index(PIPE_ARRAY_SIZE-1, node) +: SIMD_A_WORD_WIDTH] = A_in[(SIMD_A_in_index(node) + SIMD_A_WORD_WIDTH) +: SIMD_A_WORD_WIDTH];
+                // See index functions for SIMD ports A0. We add SIMD_A_WORD_WIDTH here to index into A1 instead.
+                assign SIMD_A1_pipe_in[SIMD_A1_pipe_index(PIPE_ARRAY_SIZE-1, node) +: SIMD_A_WORD_WIDTH] = A_in[(SIMD_A_in_index(node, lane) + SIMD_A_WORD_WIDTH) +: SIMD_A_WORD_WIDTH];
                 for (line=PIPE_ARRAY_SIZE-1; line > 0; line=line-1) begin : SIMD_A1_pipe_lane
-                    assign Mesh_Node_Line_A_in[(SIMD_Mesh_Node_A_in_index(line, node) + SIMD_A_WORD_WIDTH) +: SIMD_A_WORD_WIDTH] = SIMD_A1_pipe_out[SIMD_A1_pipe_index(line, node) +: SIMD_A_WORD_WIDTH];
-                    assign SIMD_A1_pipe_in[SIMD_A1_pipe_index(line-1, node) +: SIMD_A_WORD_WIDTH] = Mesh_Node_Line_A_out[(SIMD_Mesh_Node_A_out_index(line, node) + SIMD_A_WORD_WIDTH) +: SIMD_A_WORD_WIDTH];
+                    assign Mesh_Node_Line_A_in[(SIMD_Mesh_Node_A_in_index(line-1, node, lane) + SIMD_A_WORD_WIDTH) +: SIMD_A_WORD_WIDTH] = SIMD_A1_pipe_out[SIMD_A1_pipe_index(line, node) +: SIMD_A_WORD_WIDTH];
+                    assign SIMD_A1_pipe_in[SIMD_A1_pipe_index(line-1, node) +: SIMD_A_WORD_WIDTH] = Mesh_Node_Line_A_out[(SIMD_Mesh_Node_A_out_index(line-1, node, lane) + SIMD_A_WORD_WIDTH) +: SIMD_A_WORD_WIDTH];
                 end
-                assign A_out[SIMD_A_out_index(node) +: SIMD_A_WORD_WIDTH] = SIMD_A1_pipe_out[SIMD_A1_pipe_index(0, node) +: SIMD_A_WORD_WIDTH];
+                assign A_out[(SIMD_A_out_index(node, lane) + SIMD_A_WORD_WIDTH) +: SIMD_A_WORD_WIDTH] = SIMD_A1_pipe_out[SIMD_A1_pipe_index(0, node) +: SIMD_A_WORD_WIDTH];
             end
         end
     endgenerate
