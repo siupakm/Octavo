@@ -258,13 +258,13 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
             );
 
             for (lane = 0; lane < SIMD_LANE_COUNT; lane = lane + 1) begin : simd_test_harness_A_out
-                wire    [SIMD_A_IO_WRITE_PORT_WIDTH_TOTAL-1:0]  SIMD_out_A;
+                wire    [SIMD_A_IO_WRITE_PORT_WIDTH-1:0]  SIMD_out_A;
                 
                 output_register
                 #(
                     .WIDTH          (SIMD_A_WORD_WIDTH)
                 )
-                SIMD_or_out_A       [SIMD_A_IO_WRITE_PORT_COUNT_TOTAL-1:0]
+                SIMD_or_out_A       [SIMD_A_IO_WRITE_PORT_COUNT-1:0]
                 (
                     .clock          (clock),
                     .in             (dut_A_out  [lane_width_offset(node, lane) +: SIMD_A_IO_WRITE_PORT_WIDTH]),
@@ -276,7 +276,7 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
                 #(
                     .WIDTH          (SIMD_A_WORD_WIDTH)
                 ) 
-                SIMD_rr_out_A       [SIMD_A_IO_WRITE_PORT_COUNT_TOTAL-1:0]
+                SIMD_rr_out_A       [SIMD_A_IO_WRITE_PORT_COUNT-1:0]
                 (
                     .clock          (clock),
                     .input_port     (SIMD_out_A),
@@ -316,13 +316,13 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
             );
 
             for (lane = 0; lane < SIMD_LANE_COUNT; lane = lane + 1) begin : simd_test_harness_B_out
-                wire    [SIMD_B_IO_WRITE_PORT_WIDTH_TOTAL-1:0]  SIMD_out_B;
+                wire    [SIMD_B_IO_WRITE_PORT_WIDTH-1:0]  SIMD_out_B;
                 
                 output_register
                 #(
                     .WIDTH          (SIMD_B_WORD_WIDTH)
                 )
-                SIMD_or_out_B       [SIMD_B_IO_WRITE_PORT_COUNT_TOTAL-1:0]
+                SIMD_or_out_B       [SIMD_B_IO_WRITE_PORT_COUNT-1:0]
                 (
                     .clock          (clock),
                     .in             (dut_B_out  [lane_width_offset(node, lane) +: SIMD_B_IO_WRITE_PORT_WIDTH]),
@@ -334,7 +334,7 @@ def test_harness(parameters, default_memory_init = default_memory_init, install_
                 #(
                     .WIDTH          (SIMD_B_WORD_WIDTH)
                 ) 
-                SIMD_rr_out_B       [SIMD_B_IO_WRITE_PORT_COUNT_TOTAL-1:0]
+                SIMD_rr_out_B       [SIMD_B_IO_WRITE_PORT_COUNT-1:0]
                 (
                     .clock          (clock),
                     .input_port     (SIMD_out_B),
