@@ -257,7 +257,7 @@ module Memory_io_read_port_rden
     input   wire                                    clock,
     input   wire                                    addr_in_io_range,
     input   wire    [IO_READ_PORT_ADDR_WIDTH-1:0]   port_addr,
-    output  reg     [IO_READ_PORT_COUNT-1:0]        rden
+    output  reg     [IO_READ_PORT_COUNT-1:0]        rden /* synthesis noprune */
 );
     // Read Enables, one per port
     integer port = 0;
@@ -369,7 +369,7 @@ module Memory_io_write_port
     output  reg                                                 wren_out_ram,
     output  reg     [ADDR_WIDTH-1:0]                            write_addr_out_ram,
     output  reg     [WORD_WIDTH-1:0]                            write_data_out_ram,
-    output  reg     [IO_WRITE_PORT_COUNT-1:0]                   wren_out_io,
+    output  reg     [IO_WRITE_PORT_COUNT-1:0]                   wren_out_io /* synthesis noprune */,
     output  reg     [(WORD_WIDTH * IO_WRITE_PORT_COUNT)-1:0]    write_data_out_io    
 );
 
