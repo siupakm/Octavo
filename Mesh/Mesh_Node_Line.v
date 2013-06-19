@@ -217,8 +217,18 @@ module Mesh_Node_Line
         for (node=0; node < (PIPE_ARRAY_SIZE-1); node=node+1) begin : B0_pipe_wiring
             assign Mesh_Node_B_in[(B_in_WIDTH * node) +: B_WORD_WIDTH] = B0_pipe_out[(B_WORD_WIDTH * node) +: B_WORD_WIDTH];
             assign B0_pipe_in[(B_WORD_WIDTH * (node+1)) +: B_WORD_WIDTH] = Mesh_Node_B_out[(B_out_WIDTH * node) +: B_WORD_WIDTH];
+
         end
         assign B_out[0 +: B_WORD_WIDTH] = B0_pipe_out[(B_WORD_WIDTH * (PIPE_ARRAY_SIZE-1)) +: B_WORD_WIDTH];
+
+        // Connect the wren/rden wires only at the ends
+        localparam last_rden = B_rden_WIDTH * (MESH_LINE_NODE_COUNT-1);
+        localparam last_wren = B_wren_WIDTH * (MESH_LINE_NODE_COUNT-1);
+
+        assign B_rden[0 +: 1] = Mesh_Node_B_rden[0 +: 1];
+        assign B_wren[0 +: 1] = Mesh_Node_B_wren[0 +: 1];
+        assign B_rden[1 +: 1] = Mesh_Node_B_rden[last_rden +: 1];
+        assign B_wren[1 +: 1] = Mesh_Node_B_wren[last_wren +: 1];
     endgenerate
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -253,6 +263,16 @@ module Mesh_Node_Line
                 assign SIMD_B0_pipe_in[(SIMD_B_WORD_WIDTH * (node+1)) +: SIMD_B_WORD_WIDTH] = Mesh_Node_B_out[((B_out_WIDTH * node) + SIMD_B0_port(lane)) +: SIMD_B_WORD_WIDTH];
             end
             assign B_out[SIMD_B0_port(lane) +: SIMD_B_WORD_WIDTH] = SIMD_B0_pipe_out[(SIMD_B_WORD_WIDTH * (PIPE_ARRAY_SIZE-1)) +: SIMD_B_WORD_WIDTH];
+
+            // Connect the wren/rden wires only at the ends
+            localparam last_rden = B_rden_WIDTH * (MESH_LINE_NODE_COUNT-1);
+            localparam last_wren = B_wren_WIDTH * (MESH_LINE_NODE_COUNT-1);
+            localparam lane_offset = (lane * SIMD_B_IO_READ_PORT_COUNT) + B_IO_READ_PORT_COUNT;
+
+            assign B_rden[ lane_offset      +: 1] = Mesh_Node_B_rden[ lane_offset              +: 1];
+            assign B_wren[ lane_offset      +: 1] = Mesh_Node_B_wren[ lane_offset              +: 1];
+            assign B_rden[(lane_offset + 1) +: 1] = Mesh_Node_B_rden[(lane_offset + last_rden) +: 1];
+            assign B_wren[(lane_offset + 1) +: 1] = Mesh_Node_B_wren[(lane_offset + last_wren) +: 1];
         end
     endgenerate
 
