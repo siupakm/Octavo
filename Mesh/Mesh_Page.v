@@ -242,6 +242,15 @@ module Mesh_Page
             end
             assign A_out[(Node_A_out_WIDTH * node) +: A_WORD_WIDTH] = A0_pipe_out[A0_pipe_index(PIPE_ARRAY_SIZE-1, node) +: A_WORD_WIDTH];
         end
+
+        // Connect the wren/rden wires only at the ends                                                                                                                                                     
+        localparam last_rden = A_rden_WIDTH * (MESH_PAGE_LINE_COUNT-1);                                                                                                                                     
+        localparam last_wren = A_wren_WIDTH * (MESH_PAGE_LINE_COUNT-1);                                                                                                                                     
+                                                                                                                                                                                                            
+        assign A_rden[0 +: 1] = Mesh_Node_Line_A_rden[0 +: 1];
+        assign A_wren[0 +: 1] = Mesh_Node_Line_A_wren[0 +: 1]; 
+        assign A_rden[1 +: 1] = Mesh_Node_Line_A_rden[last_rden +: 1];
+        assign A_wren[1 +: 1] = Mesh_Node_Line_A_wren[last_wren +: 1];
     endgenerate
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -295,6 +304,16 @@ module Mesh_Page
                 end
                 assign A_out[SIMD_A_out_index(node, lane) +: SIMD_A_WORD_WIDTH] = SIMD_A0_pipe_out[SIMD_A0_pipe_index(PIPE_ARRAY_SIZE-1, node) +: SIMD_A_WORD_WIDTH];
             end
+
+            // Connect the wren/rden wires only at the ends                                                                                                                                                 
+            localparam last_rden = A_rden_WIDTH * (MESH_PAGE_LINE_COUNT-1);                                                                                                                                 
+            localparam last_wren = A_wren_WIDTH * (MESH_PAGE_LINE_COUNT-1);                                                                                                                                 
+            localparam lane_offset = (lane * SIMD_A_IO_READ_PORT_COUNT) + A_IO_READ_PORT_COUNT;                                                                                                             
+                                                                                                                                                                                                            
+            assign A_rden[ lane_offset      +: 1] = Mesh_Node_Line_A_rden[ lane_offset              +: 1];
+            assign A_wren[ lane_offset      +: 1] = Mesh_Node_Line_A_wren[ lane_offset              +: 1];
+            assign A_rden[(lane_offset + 1) +: 1] = Mesh_Node_Line_A_rden[(lane_offset + last_rden) +: 1];
+            assign A_wren[(lane_offset + 1) +: 1] = Mesh_Node_Line_A_wren[(lane_offset + last_wren) +: 1];
         end
     endgenerate
 
