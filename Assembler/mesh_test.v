@@ -9,6 +9,8 @@
 
 `define PC_FILE    "mesh_test.pc"
 `define MEM_FILE   "mesh_test.mem"
+`define SIMD_MEM_FILE   "SIMD_mesh_test.mem"
+`define SIMD_WORD_WIDTH 36
 `define THREADS    8
 `define ADDR_WIDTH 10
 `define MEM_DEPTH  2**10
@@ -104,6 +106,17 @@ module do_test ();
     test
     #(
         .INIT_FILE      (`MEM_FILE),
+        .START_ADDR     (0),
+        .END_ADDR       (`MEM_DEPTH - 1)
+    )
+    test ();
+endmodule
+
+module SIMD_do_test ();
+    test
+    #(
+        .WORD_WIDTH     (`SIMD_WORD_WIDTH),
+        .INIT_FILE      (`SIMD_MEM_FILE),
         .START_ADDR     (0),
         .END_ADDR       (`MEM_DEPTH - 1)
     )

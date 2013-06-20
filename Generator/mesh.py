@@ -8,7 +8,7 @@ import parameters_misc
 import mesh_parameters 
 import mesh_definition
 import mesh_test_harness
-#import mesh_test_bench
+import mesh_test_bench
 
 def mesh(parameters = {}):
     all_parameters = mesh_parameters.all_parameters(parameters)
@@ -21,7 +21,7 @@ def mesh(parameters = {}):
                                          all_parameters)
     os.chdir(mesh_dir)
     mesh_test_harness.main(all_parameters)
-    #mesh_test_bench.main(all_parameters)
+    mesh_test_bench.main(all_parameters)
     return name
 
 if __name__ == "__main__":
