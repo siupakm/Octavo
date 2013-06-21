@@ -354,7 +354,9 @@ def test_harness_script(parameters):
     test_harness_script_template = string.Template(
 """#! /bin/bash
 
+date > LOG_QUARTUS_START
 quartus_sh --flow compile ${MESH_NAME}_test_harness 2>&1 | tee LOG_QUARTUS
+date > LOG_QUARTUS_FINISH
 
 """)
     return test_harness_script_template.substitute(parameters)
